@@ -10,6 +10,8 @@ import {
   DecoySignal,
   SmokeCloud,
   Footprint,
+  DroneReconEvent,
+  RadarScanEvent,
   Team,
   GpsCoordinate
 } from '../types/game.js';
@@ -35,6 +37,8 @@ export class GameRoom {
   public activeDecoys: DecoySignal[] = [];
   public activeSmokeClouds: SmokeCloud[] = [];
   public activeFootprints: Footprint[] = [];
+  public activeDroneScans: DroneReconEvent[] = [];
+  public activeRadarScans: RadarScanEvent[] = [];
   public killFeed: KillFeedItem[] = [];
   public winner: 'HIDERS' | 'HUNTERS' | 'DRAW' | null = null;
 
@@ -154,6 +158,8 @@ export class GameRoom {
     this.activeDecoys = [];
     this.activeSmokeClouds = [];
     this.activeFootprints = [];
+    this.activeDroneScans = [];
+    this.activeRadarScans = [];
 
     // Reset players
     for (const player of Object.values(this.players)) {
@@ -234,6 +240,8 @@ export class GameRoom {
     this.activeDecoys = this.activeDecoys.filter(d => d.expiresAt > now);
     this.activeSmokeClouds = this.activeSmokeClouds.filter(s => s.expiresAt > now);
     this.activeFootprints = this.activeFootprints.filter(f => f.expiresAt > now);
+    this.activeDroneScans = this.activeDroneScans.filter(d => d.expiresAt > now);
+    this.activeRadarScans = this.activeRadarScans.filter(r => r.expiresAt > now);
 
     // 4. Check Win / Loss Conditions
     const hiders = Object.values(this.players).filter(p => p.team === 'HIDERS');
@@ -435,6 +443,15 @@ export class GameRoom {
     }
     if (res.smoke) {
       this.activeSmokeClouds.push(res.smoke);
+      this.onAudioAlert(this.code, 'SMOKE');
+    }
+    if (res.droneScan) {
+      this.activeDroneScans.push(res.droneScan);
+      this.onAudioAlert(this.code, 'DRONE_SCAN');
+    }
+    if (res.radarScan) {
+      this.activeRadarScans.push(res.radarScan);
+      this.onAudioAlert(this.code, 'SCANNER');
     }
 
     this.onStateBroadcast(this);
@@ -541,6 +558,8 @@ export class GameRoom {
       activeDecoys: this.activeDecoys,
       activeSmokeClouds: this.activeSmokeClouds,
       activeFootprints: this.activeFootprints,
+      activeDroneScans: this.activeDroneScans,
+      activeRadarScans: this.activeRadarScans,
       killFeed: this.killFeed,
       winner: this.winner,
       hidersAlive: aliveHiders,

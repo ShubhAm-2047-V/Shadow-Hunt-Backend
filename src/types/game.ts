@@ -149,6 +149,34 @@ export interface Footprint {
   expiresAt: number;
 }
 
+export interface DroneReconEvent {
+  id: string;
+  initiatorId: string;
+  initiatorName: string;
+  startLat: number;
+  startLng: number;
+  targetLat: number;
+  targetLng: number;
+  heading: number;
+  radius: number;
+  timestamp: number;
+  durationMs: number;
+  expiresAt: number;
+  revealedHiders?: Array<{ id: string; name: string; latitude: number; longitude: number }>;
+}
+
+export interface RadarScanEvent {
+  id: string;
+  initiatorId: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  timestamp: number;
+  durationMs: number;
+  expiresAt: number;
+  revealedHiders?: Array<{ id: string; name: string; latitude: number; longitude: number }>;
+}
+
 export interface ServerAuthoritativeState {
   roomCode: string;
   status: GameStatus;
@@ -162,6 +190,8 @@ export interface ServerAuthoritativeState {
   activeDecoys: DecoySignal[];
   activeSmokeClouds: SmokeCloud[];
   activeFootprints: Footprint[];
+  activeDroneScans: DroneReconEvent[];
+  activeRadarScans: RadarScanEvent[];
   killFeed: KillFeedItem[];
   winner: 'HIDERS' | 'HUNTERS' | 'DRAW' | null;
   hidersAlive: number;
