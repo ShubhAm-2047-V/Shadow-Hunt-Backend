@@ -65,7 +65,7 @@ export class GameRoom {
       durationSeconds: 900,
       shadowIntervalSeconds: 180,
       shadowDurationSeconds: 6,
-      captureRadius: 8.0, // 8.0 meters physical GPS capture proximity
+      captureRadius: 15.0, // 15.0 meters physical GPS capture proximity (aligns with client & absorbs outdoor GPS drift)
       maxTeamSize: 10,
       abilitiesEnabled: true,
       shadowMode: 'GHOST_SHADOW',
