@@ -14,7 +14,7 @@ import {
   GpsCoordinate
 } from '../types/game.js';
 import { AbilitiesManager } from './AbilitiesManager.js';
-import { CAMPUS_PRESETS } from '../osm/mapPresets.js';
+import { CAMPUS_PRESETS, createLiveSector } from '../osm/mapPresets.js';
 import { AuthService } from '../services/AuthService.js';
 import {
   haversineDistanceMeters,
@@ -302,6 +302,16 @@ export class GameRoom {
     if (!player) return;
 
     const now = Date.now();
+
+    // AUTO-ANCHOR REAL GPS: If this room was on a demo map preset (Stanford) or far away,
+    // immediately re-anchor the tactical operational zone right at the player's real-world GPS coordinates!
+    if (gps.latitude !== 0 && gps.longitude !== 0) {
+      const distFromCenter = haversineDistanceMeters(gps.latitude, gps.longitude, this.map.center[0], this.map.center[1]);
+      if (this.map.id === 'stanford-quad' || distFromCenter > 50000) {
+        console.log(`[LIVE GPS AUTO-ANCHOR] Room ${this.code} re-anchoring to player ${player.name}'s real GPS: (${gps.latitude}, ${gps.longitude})`);
+        this.map = createLiveSector(gps.latitude, gps.longitude, 300, `Live Sector: ${player.name}'s Zone`);
+      }
+    }
 
     // Check GPS accuracy: if worse than threshold, reject or flag
     if (gps.accuracy > this.settings.maxGpsAccuracy) {

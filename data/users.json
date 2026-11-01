@@ -1,0 +1,17 @@
+[
+  {
+    "id": "op_1793517304218_y5hyt",
+    "username": "test_op_4212",
+    "email": "test_op_4212@campushunt.tactical",
+    "callsign": "Ghost-9",
+    "matchesPlayed": 1,
+    "winsAsHider": 0,
+    "winsAsHunter": 1,
+    "totalCaptures": 3,
+    "totalSurvivalSeconds": 240,
+    "createdAt": 1793517304218,
+    "lastLoginAt": 1793517304225,
+    "passwordHash": "3a897decfb835b44292eb02e792a30d81a92d9fd0aa542d8d40f7bf7ca9a32c4d45358a00e92a733a0c6172dd3f6e2638217da35f9c2a513cb9cc16864af7af3",
+    "salt": "4b9e5f1ff56af62f722e3358be68a495"
+  }
+]

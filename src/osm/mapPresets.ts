@@ -404,3 +404,56 @@ function createPreset(input: PresetInput): MapData {
   };
 }
 
+/**
+ * Dynamically generates a real-world GPS tactical boundary centered around the player's live physical location.
+ */
+export function createLiveSector(
+  centerLat: number,
+  centerLng: number,
+  radiusMeters = 300,
+  name = 'Live Tactical Sector'
+): MapData {
+  const numPoints = 12;
+  const rawPolygon: [number, number][] = [];
+  const localPolygon: [number, number][] = [];
+
+  for (let i = 0; i < numPoints; i++) {
+    const angle = (i * 2 * Math.PI) / numPoints;
+    const x = radiusMeters * Math.sin(angle);
+    const z = radiusMeters * Math.cos(angle);
+    localPolygon.push([Math.round(x * 10) / 10, Math.round(z * 10) / 10]);
+
+    const dLat = (radiusMeters * Math.cos(angle)) / 111320.0;
+    const dLng = (radiusMeters * Math.sin(angle)) / (111320.0 * Math.cos((centerLat * Math.PI) / 180.0));
+    rawPolygon.push([centerLat + dLat, centerLng + dLng]);
+  }
+  // Close polygon ring
+  rawPolygon.push([rawPolygon[0][0], rawPolygon[0][1]]);
+  localPolygon.push([localPolygon[0][0], localPolygon[0][1]]);
+
+  return {
+    id: `live-gps-${Date.now()}`,
+    name,
+    description: `Live physical operational zone centered at ${centerLat.toFixed(5)}, ${centerLng.toFixed(5)} (${radiusMeters}m radius).`,
+    center: [centerLat, centerLng],
+    polygon: rawPolygon,
+    localPolygon,
+    areaM2: Math.round(Math.PI * radiusMeters * radiusMeters),
+    dimensions: {
+      widthM: radiusMeters * 2,
+      heightM: radiusMeters * 2,
+    },
+    buildings: [],
+    spawnPoints: {
+      hiders: [
+        { x: -radiusMeters * 0.25, y: 0, z: -radiusMeters * 0.25 },
+        { x: radiusMeters * 0.25, y: 0, z: radiusMeters * 0.25 }
+      ],
+      hunters: [
+        { x: 0, y: 0, z: 0 }
+      ]
+    }
+  };
+}
+
+

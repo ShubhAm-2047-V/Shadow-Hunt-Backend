@@ -4,7 +4,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { RoomManager } from './game/RoomManager.js';
-import { CAMPUS_PRESETS } from './osm/mapPresets.js';
+import { CAMPUS_PRESETS, createLiveSector } from './osm/mapPresets.js';
 import { searchPlaces, generateMapFromCustomPolygon } from './osm/osmFetcher.js';
 import { latLngToLocalMeters } from './osm/geoConverter.js';
 import { MapData } from './types/game.js';
@@ -145,10 +145,12 @@ app.post('/api/map/custom', async (req, res) => {
 // 1. Create Room via REST
 app.post('/api/room/create', (req, res) => {
   try {
-    const { playerName, mapId, customMap, playerId } = req.body;
+    const { playerName, mapId, customMap, playerId, hostLat, hostLng, radiusMeters } = req.body;
     const finalPlayerId = playerId || `mobile_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     let chosenMap = customMap;
-    if (!chosenMap && mapId && CAMPUS_PRESETS[mapId]) {
+    if (!chosenMap && hostLat && hostLng && !isNaN(Number(hostLat)) && !isNaN(Number(hostLng))) {
+      chosenMap = createLiveSector(Number(hostLat), Number(hostLng), Number(radiusMeters) || 300, `Live Sector: ${playerName || 'Operator'}'s Zone`);
+    } else if (!chosenMap && mapId && CAMPUS_PRESETS[mapId]) {
       chosenMap = CAMPUS_PRESETS[mapId];
     }
     const room = roomManager.createRoom(finalPlayerId, playerName || 'Field Operator', chosenMap);
@@ -267,10 +269,12 @@ app.post('/api/player/capture', (req, res) => {
 // Real-Time Socket.IO Handlers (for persistent Node/Railway environments)
 io.on('connection', (socket) => {
   // Create Room
-  socket.on('create_room', ({ playerName, mapId, customMap }, cb) => {
+  socket.on('create_room', ({ playerName, mapId, customMap, hostLat, hostLng, radiusMeters }, cb) => {
     try {
       let chosenMap = customMap;
-      if (!chosenMap && mapId && CAMPUS_PRESETS[mapId]) {
+      if (!chosenMap && hostLat && hostLng && !isNaN(Number(hostLat)) && !isNaN(Number(hostLng))) {
+        chosenMap = createLiveSector(Number(hostLat), Number(hostLng), Number(radiusMeters) || 300, `Live Sector: ${playerName || 'Agent'}'s Zone`);
+      } else if (!chosenMap && mapId && CAMPUS_PRESETS[mapId]) {
         chosenMap = CAMPUS_PRESETS[mapId];
       }
       const room = roomManager.createRoom(socket.id, playerName || 'Agent Host', chosenMap);
