@@ -80,6 +80,10 @@ export class RoomManager {
     return code ? this.rooms.get(code) : undefined;
   }
 
+  public getAllRooms(): GameRoom[] {
+    return Array.from(this.rooms.values());
+  }
+
   private generateRoomCode(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';

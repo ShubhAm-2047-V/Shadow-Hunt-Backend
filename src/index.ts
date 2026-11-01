@@ -273,8 +273,20 @@ app.post('/api/room/update-boundary', (req, res) => {
     let room = playerId ? roomManager.getRoomByPlayerId(playerId) : undefined;
     if (!room && roomCode) room = roomManager.getRoom(roomCode);
 
+    // Fallback to active room if exists
     if (!room) {
-      return res.status(404).json({ success: false, message: 'Room not found' });
+      const allRooms = roomManager.getAllRooms();
+      if (allRooms.length > 0) room = allRooms[0];
+    }
+
+    // Auto-create room if server restarted
+    if (!room) {
+      const targetRoomCode = roomCode || 'TACTICAL';
+      const initialMap = centerLat && centerLng && radiusMeters
+        ? createLiveSector(Number(centerLat), Number(centerLng), Number(radiusMeters), name || `Sector: ${radiusMeters}m Zone`)
+        : undefined;
+      room = roomManager.createRoom(playerId || 'operator', 'Field Operator', initialMap);
+      room.code = targetRoomCode;
     }
 
     // 1. Custom Polygon Area
@@ -366,8 +378,13 @@ io.on('connection', (socket) => {
     if (room && room.hostId === socket.id) room.setMap(mapData);
   });
 
-  socket.on('update_boundary', ({ polygon, radiusMeters, centerLat, centerLng, name }, cb) => {
-    const room = roomManager.getRoomByPlayerId(socket.id);
+  socket.on('update_boundary', ({ roomCode, polygon, radiusMeters, centerLat, centerLng, name }, cb) => {
+    let room = roomManager.getRoomByPlayerId(socket.id);
+    if (!room && roomCode) room = roomManager.getRoom(roomCode);
+    if (!room) {
+      const allRooms = roomManager.getAllRooms();
+      if (allRooms.length > 0) room = allRooms[0];
+    }
     if (!room) return cb?.({ success: false, message: 'Room not found' });
 
     if (Array.isArray(polygon) && polygon.length >= 3) {
