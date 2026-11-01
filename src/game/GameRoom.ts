@@ -390,40 +390,67 @@ export class GameRoom {
 
     const now = Date.now();
 
-    // Verify Hunter has a recent GPS update (< 10 seconds old)
-    if (hunter.gps && hunter.lastGpsUpdate && (now - hunter.lastGpsUpdate > 10000)) {
-      return { success: false, message: 'GPS signal lost or stale. Acquire clear sky fix.' };
+    // Verify Hunter has a recent GPS update (< 60 seconds old)
+    if (hunter.gps && hunter.lastGpsUpdate && (now - hunter.lastGpsUpdate > 60000)) {
+      console.warn(`[CAPTURE] Hunter GPS update is ${Math.round((now - hunter.lastGpsUpdate)/1000)}s old, but proceeding with last fix.`);
     }
 
     let capturedHider: Player | null = null;
     let closestDist = Infinity;
+    // Absorb real-world mobile GPS jitter and align with the 25m UI trigger window
+    const effectiveRadius = 28.0;
 
-    // Search for closest alive Hider within physical capture radius
-    for (const hider of Object.values(this.players)) {
-      if (hider.team === 'HIDERS' && hider.isAlive) {
-        if (targetHiderId && hider.id !== targetHiderId) continue;
-
-        let distMeters: number;
-
-        if (hunter.gps && hider.gps) {
-          // True geodesic Haversine distance
-          distMeters = haversineDistanceMeters(
+    // 1. If targetHiderId was passed, check that specific hider first
+    if (targetHiderId && this.players[targetHiderId]) {
+      const target = this.players[targetHiderId];
+      if (target.team === 'HIDERS' && target.isAlive) {
+        let dist = Infinity;
+        if (hunter.gps && target.gps) {
+          dist = haversineDistanceMeters(
             hunter.gps.latitude,
             hunter.gps.longitude,
-            hider.gps.latitude,
-            hider.gps.longitude
+            target.gps.latitude,
+            target.gps.longitude
           );
         } else {
-          // Metric Cartesian fallback
-          distMeters = Math.hypot(
-            hider.position.x - hunter.position.x,
-            hider.position.z - hunter.position.z
+          dist = Math.hypot(
+            target.position.x - hunter.position.x,
+            target.position.z - hunter.position.z
           );
         }
+        if (dist <= effectiveRadius) {
+          closestDist = dist;
+          capturedHider = target;
+        }
+      }
+    }
 
-        if (distMeters <= this.settings.captureRadius && distMeters < closestDist) {
-          closestDist = distMeters;
-          capturedHider = hider;
+    // 2. If not captured yet, search all alive Hiders within physical proximity
+    if (!capturedHider) {
+      for (const hider of Object.values(this.players)) {
+        if (hider.team === 'HIDERS' && hider.isAlive) {
+          let distMeters: number;
+
+          if (hunter.gps && hider.gps) {
+            // True geodesic Haversine distance
+            distMeters = haversineDistanceMeters(
+              hunter.gps.latitude,
+              hunter.gps.longitude,
+              hider.gps.latitude,
+              hider.gps.longitude
+            );
+          } else {
+            // Metric Cartesian fallback
+            distMeters = Math.hypot(
+              hider.position.x - hunter.position.x,
+              hider.position.z - hunter.position.z
+            );
+          }
+
+          if (distMeters <= effectiveRadius && distMeters < closestDist) {
+            closestDist = distMeters;
+            capturedHider = hider;
+          }
         }
       }
     }
@@ -431,7 +458,7 @@ export class GameRoom {
     if (!capturedHider) {
       return {
         success: false,
-        message: `No hider within capture proximity (${this.settings.captureRadius}m). Closest: ${closestDist === Infinity ? 'None' : Math.round(closestDist) + 'm'}`
+        message: `No hider within capture proximity (${effectiveRadius}m). Closest: ${closestDist === Infinity ? 'None' : Math.round(closestDist) + 'm'}`
       };
     }
 
@@ -452,7 +479,14 @@ export class GameRoom {
 
     console.log(`[CAPTURE CONFIRMED] Hunter ${hunter.name} physically captured Hider ${capturedHider.name} at distance ${closestDist.toFixed(1)}m`);
     this.onAudioAlert(this.code, 'CAPTURE');
-    this.onStateBroadcast(this);
+
+    // Check if all hiders are now eliminated -> HUNTERS WIN
+    const remainingAlive = Object.values(this.players).filter(p => p.team === 'HIDERS' && p.isAlive);
+    if (remainingAlive.length === 0) {
+      this.endRound('HUNTERS');
+    } else {
+      this.onStateBroadcast(this);
+    }
 
     return {
       success: true,

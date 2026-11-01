@@ -256,8 +256,12 @@ app.post('/api/ability/trigger', (req, res) => {
 
 // 8. Capture Attempt via REST
 app.post('/api/player/capture', (req, res) => {
-  const { playerId, targetHiderId } = req.body;
-  const room = roomManager.getRoomByPlayerId(playerId);
+  const { playerId, targetHiderId, roomCode } = req.body;
+  let room = playerId ? roomManager.getRoomByPlayerId(playerId) : undefined;
+  if (!room && roomCode) room = roomManager.getRoom(roomCode);
+  if (!room && roomManager.getAllRooms().length === 1) {
+    room = roomManager.getAllRooms()[0];
+  }
   if (room) {
     const result = room.attemptCapture(playerId, targetHiderId);
     const state = room.getStateForPlayer(playerId);

@@ -77,7 +77,21 @@ export class RoomManager {
 
   public getRoomByPlayerId(playerId: string): GameRoom | undefined {
     const code = this.playerRoomMap.get(playerId);
-    return code ? this.rooms.get(code) : undefined;
+    if (code && this.rooms.has(code)) {
+      return this.rooms.get(code);
+    }
+    // Search all rooms for player ID in case playerRoomMap was reset
+    for (const room of this.rooms.values()) {
+      if (room.players[playerId]) {
+        this.playerRoomMap.set(playerId, room.code);
+        return room;
+      }
+    }
+    // If only one room is running, fallback to it
+    if (this.rooms.size === 1) {
+      return Array.from(this.rooms.values())[0];
+    }
+    return undefined;
   }
 
   public getAllRooms(): GameRoom[] {
