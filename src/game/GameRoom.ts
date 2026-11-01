@@ -15,6 +15,7 @@ import {
 } from '../types/game.js';
 import { AbilitiesManager } from './AbilitiesManager.js';
 import { CAMPUS_PRESETS } from '../osm/mapPresets.js';
+import { AuthService } from '../services/AuthService.js';
 import {
   haversineDistanceMeters,
   isLatLngInsideBoundary,
@@ -436,6 +437,18 @@ export class GameRoom {
     if (this.tickInterval) {
       clearInterval(this.tickInterval);
       this.tickInterval = null;
+    }
+
+    // Record career stats for registered operators
+    for (const p of Object.values(this.players)) {
+      if (p.isBot) continue;
+      AuthService.getInstance().recordMatchOutcome(
+        p.name,
+        p.team as 'HIDERS' | 'HUNTERS',
+        p.team === winner,
+        p.captures,
+        p.survivedSeconds
+      );
     }
 
     console.log(`[ROUND OVER] Match ended in room ${this.code}. Winner: ${winner}`);

@@ -8,11 +8,13 @@ import { CAMPUS_PRESETS } from './osm/mapPresets.js';
 import { searchPlaces, generateMapFromCustomPolygon } from './osm/osmFetcher.js';
 import { latLngToLocalMeters } from './osm/geoConverter.js';
 import { MapData } from './types/game.js';
+import { AuthService } from './services/AuthService.js';
 
 dotenv.config();
 
 export const app = express();
 export const server = http.createServer(app);
+const authService = AuthService.getInstance();
 
 // Allow any origin for easy local testing, LAN access, Vercel, and ngrok tunnels
 export const io = new SocketIOServer(server, {
@@ -74,6 +76,43 @@ app.get('/api', (_req, res) => {
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'Campus Hunt Backend', time: new Date().toISOString() });
+});
+
+// Authentication Endpoints
+app.post('/api/auth/register', async (req, res) => {
+  const { username, email, password, callsign } = req.body;
+  const result = await authService.register(username, email, password, callsign);
+  if (!result.success) {
+    return res.status(400).json(result);
+  }
+  res.json(result);
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { usernameOrEmail, password } = req.body;
+  const result = await authService.login(usernameOrEmail, password);
+  if (!result.success) {
+    return res.status(401).json(result);
+  }
+  res.json(result);
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Authorization token required' });
+  }
+  const token = authHeader.substring(7);
+  const user = authService.verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
+  res.json({ success: true, user });
+});
+
+app.get('/api/auth/leaderboard', (_req, res) => {
+  const leaderboard = authService.getLeaderboard(15);
+  res.json({ success: true, leaderboard });
 });
 
 app.get('/api/presets', (_req, res) => {
