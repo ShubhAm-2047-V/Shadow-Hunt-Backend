@@ -4,7 +4,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { RoomManager } from './game/RoomManager.js';
-import { CAMPUS_PRESETS, createLiveSector } from './osm/mapPresets.js';
+import { CAMPUS_PRESETS, createLiveSector, createCustomPolygonSector } from './osm/mapPresets.js';
 import { searchPlaces, generateMapFromCustomPolygon } from './osm/osmFetcher.js';
 import { latLngToLocalMeters } from './osm/geoConverter.js';
 import { MapData } from './types/game.js';
@@ -266,6 +266,51 @@ app.post('/api/player/capture', (req, res) => {
   res.status(404).json({ success: false, message: 'Room or player not found' });
 });
 
+// 9. Update Play Area / Boundary via REST
+app.post('/api/room/update-boundary', (req, res) => {
+  try {
+    const { playerId, roomCode, polygon, name, radiusMeters, centerLat, centerLng } = req.body;
+    let room = playerId ? roomManager.getRoomByPlayerId(playerId) : undefined;
+    if (!room && roomCode) room = roomManager.getRoom(roomCode);
+
+    if (!room) {
+      return res.status(404).json({ success: false, message: 'Room not found' });
+    }
+
+    // 1. Custom Polygon Area
+    if (Array.isArray(polygon) && polygon.length >= 3) {
+      const newMap = createCustomPolygonSector(polygon, name || 'Custom Tactical Perimeter');
+      room.setMap(newMap);
+      room.killFeed.unshift({
+        id: `boundary-${Date.now()}`,
+        timestamp: Date.now(),
+        hunterName: 'SECTOR RECONFIGURED',
+        hiderName: `Play area updated: ${polygon.length} nodes (${newMap.areaM2} m²)`
+      });
+      room.broadcast();
+      return res.json({ success: true, map: newMap, state: room.getStateForPlayer(playerId || 'operator') });
+    }
+
+    // 2. Center + Radius Sector
+    if (centerLat && centerLng && radiusMeters) {
+      const newMap = createLiveSector(Number(centerLat), Number(centerLng), Number(radiusMeters), name || `Sector: ${radiusMeters}m Zone`);
+      room.setMap(newMap);
+      room.killFeed.unshift({
+        id: `boundary-${Date.now()}`,
+        timestamp: Date.now(),
+        hunterName: 'SECTOR RECONFIGURED',
+        hiderName: `Operational radius set to ${radiusMeters}m`
+      });
+      room.broadcast();
+      return res.json({ success: true, map: newMap, state: room.getStateForPlayer(playerId || 'operator') });
+    }
+
+    res.status(400).json({ success: false, message: 'Provide either polygon coordinates or centerLat + centerLng + radiusMeters' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
 // Real-Time Socket.IO Handlers (for persistent Node/Railway environments)
 io.on('connection', (socket) => {
   // Create Room
@@ -319,6 +364,39 @@ io.on('connection', (socket) => {
   socket.on('select_map', (mapData: MapData) => {
     const room = roomManager.getRoomByPlayerId(socket.id);
     if (room && room.hostId === socket.id) room.setMap(mapData);
+  });
+
+  socket.on('update_boundary', ({ polygon, radiusMeters, centerLat, centerLng, name }, cb) => {
+    const room = roomManager.getRoomByPlayerId(socket.id);
+    if (!room) return cb?.({ success: false, message: 'Room not found' });
+
+    if (Array.isArray(polygon) && polygon.length >= 3) {
+      const newMap = createCustomPolygonSector(polygon, name || 'Custom Tactical Perimeter');
+      room.setMap(newMap);
+      room.killFeed.unshift({
+        id: `boundary-${Date.now()}`,
+        timestamp: Date.now(),
+        hunterName: 'SECTOR RECONFIGURED',
+        hiderName: `Play area updated: ${polygon.length} nodes`
+      });
+      room.broadcast();
+      return cb?.({ success: true, map: newMap });
+    }
+
+    if (centerLat && centerLng && radiusMeters) {
+      const newMap = createLiveSector(Number(centerLat), Number(centerLng), Number(radiusMeters), name || `Sector: ${radiusMeters}m Zone`);
+      room.setMap(newMap);
+      room.killFeed.unshift({
+        id: `boundary-${Date.now()}`,
+        timestamp: Date.now(),
+        hunterName: 'SECTOR RECONFIGURED',
+        hiderName: `Operational radius set to ${radiusMeters}m`
+      });
+      room.broadcast();
+      return cb?.({ success: true, map: newMap });
+    }
+
+    cb?.({ success: false, message: 'Invalid boundary parameters' });
   });
 
   socket.on('start_match', (cb) => {

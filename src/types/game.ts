@@ -177,6 +177,14 @@ export interface RadarScanEvent {
   revealedHiders?: Array<{ id: string; name: string; latitude: number; longitude: number }>;
 }
 
+export interface ActiveBreach {
+  playerId: string;
+  playerName: string;
+  playerTeam: Team;
+  outOfBoundsSince: number;
+  secondsOutside: number;
+}
+
 export interface ServerAuthoritativeState {
   roomCode: string;
   status: GameStatus;
@@ -192,6 +200,7 @@ export interface ServerAuthoritativeState {
   activeFootprints: Footprint[];
   activeDroneScans: DroneReconEvent[];
   activeRadarScans: RadarScanEvent[];
+  activeBreaches: ActiveBreach[];
   killFeed: KillFeedItem[];
   winner: 'HIDERS' | 'HUNTERS' | 'DRAW' | null;
   hidersAlive: number;

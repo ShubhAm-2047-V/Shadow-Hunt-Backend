@@ -456,4 +456,58 @@ export function createLiveSector(
   };
 }
 
+/**
+ * Creates a MapData sector from a custom array of [lat, lng] coordinates
+ */
+export function createCustomPolygonSector(
+  polygon: [number, number][],
+  name = 'Custom Operational Zone'
+): MapData {
+  if (polygon.length < 3) {
+    throw new Error('Polygon must contain at least 3 coordinates');
+  }
+
+  // Ensure closed ring
+  const closedPoly: [number, number][] = [...polygon];
+  const first = closedPoly[0];
+  const last = closedPoly[closedPoly.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) {
+    closedPoly.push([first[0], first[1]]);
+  }
+
+  // Calculate centroid
+  let sumLat = 0;
+  let sumLng = 0;
+  for (let i = 0; i < closedPoly.length - 1; i++) {
+    sumLat += closedPoly[i][0];
+    sumLng += closedPoly[i][1];
+  }
+  const count = closedPoly.length - 1;
+  const centerLat = sumLat / count;
+  const centerLng = sumLng / count;
+
+  const localPolygon: [number, number][] = closedPoly.map(([lat, lng]) => {
+    const dLat = (lat - centerLat) * 111320.0;
+    const dLng = (lng - centerLng) * (111320.0 * Math.cos((centerLat * Math.PI) / 180.0));
+    return [Math.round(dLng * 10) / 10, Math.round(dLat * 10) / 10];
+  });
+
+  return {
+    id: `custom-zone-${Date.now()}`,
+    name,
+    description: `Tactical play area with ${count} perimeter coordinates.`,
+    center: [centerLat, centerLng],
+    polygon: closedPoly,
+    localPolygon,
+    areaM2: 50000,
+    dimensions: { widthM: 300, heightM: 300 },
+    buildings: [],
+    spawnPoints: {
+      hiders: [{ x: -20, y: 0.5, z: -20 }],
+      hunters: [{ x: 20, y: 0.5, z: 20 }]
+    }
+  };
+}
+
+
 

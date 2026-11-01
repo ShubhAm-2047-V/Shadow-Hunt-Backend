@@ -79,6 +79,11 @@ export class GameRoom {
 
   public setMap(newMap: MapData) {
     this.map = newMap;
+    this.onStateBroadcast(this);
+  }
+
+  public broadcast() {
+    this.onStateBroadcast(this);
   }
 
   public addPlayer(id: string, name: string): Player {
@@ -327,6 +332,7 @@ export class GameRoom {
     }
 
     // Check geofence boundary using Turf.js
+    const wasInside = player.isInsideBoundary;
     const isInside = isLatLngInsideBoundary(gps.latitude, gps.longitude, this.map.polygon);
     player.isInsideBoundary = isInside;
 
@@ -334,7 +340,29 @@ export class GameRoom {
       if (!player.outOfBoundsSince) {
         player.outOfBoundsSince = now;
       }
+
+      // If player JUST crossed outside the perimeter, alert all players!
+      if (wasInside && this.status === 'IN_GAME') {
+        console.warn(`[GEOFENCE BREACH] ${player.name} (${player.team}) stepped OUT OF BOUNDS!`);
+        this.killFeed.unshift({
+          id: `breach-${now}-${player.id}`,
+          timestamp: now,
+          hunterName: 'PERIMETER ALARM',
+          hiderName: `⚠️ ${player.name} (${player.team}) IS OUT OF BOUNDS!`
+        });
+        this.onAudioAlert(this.code, 'GEOFENCE_BREACH');
+      }
     } else {
+      // If player just returned inside:
+      if (!wasInside && player.outOfBoundsSince && this.status === 'IN_GAME') {
+        console.log(`[PERIMETER SECURED] ${player.name} returned inside the play boundary.`);
+        this.killFeed.unshift({
+          id: `returned-${now}-${player.id}`,
+          timestamp: now,
+          hunterName: 'PERIMETER RE-ENTERED',
+          hiderName: `✅ ${player.name} returned to safe play area`
+        });
+      }
       player.outOfBoundsSince = null;
     }
 
@@ -545,6 +573,21 @@ export class GameRoom {
     const aliveHiders = allHiders.filter(p => p.isAlive).length;
     const huntersCount = Object.values(this.players).filter(p => p.team === 'HUNTERS').length;
 
+    // Detect all active perimeter breaches for whole-room alerting
+    const activeBreaches = [];
+    const now = Date.now();
+    for (const p of Object.values(this.players)) {
+      if (!p.isInsideBoundary && p.isAlive && p.outOfBoundsSince) {
+        activeBreaches.push({
+          playerId: p.id,
+          playerName: p.name,
+          playerTeam: p.team,
+          outOfBoundsSince: p.outOfBoundsSince,
+          secondsOutside: Math.floor((now - p.outOfBoundsSince) / 1000)
+        });
+      }
+    }
+
     return {
       roomCode: this.code,
       status: this.status,
@@ -560,6 +603,7 @@ export class GameRoom {
       activeFootprints: this.activeFootprints,
       activeDroneScans: this.activeDroneScans,
       activeRadarScans: this.activeRadarScans,
+      activeBreaches,
       killFeed: this.killFeed,
       winner: this.winner,
       hidersAlive: aliveHiders,
