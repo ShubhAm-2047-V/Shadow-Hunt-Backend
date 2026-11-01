@@ -185,6 +185,12 @@ export interface ActiveBreach {
   secondsOutside: number;
 }
 
+export interface NearbyCaptureTarget {
+  id: string;
+  name: string;
+  distance: number;
+}
+
 export interface ServerAuthoritativeState {
   roomCode: string;
   status: GameStatus;
@@ -206,4 +212,5 @@ export interface ServerAuthoritativeState {
   hidersAlive: number;
   hidersTotal: number;
   huntersCount: number;
+  nearbyCaptureTarget?: NearbyCaptureTarget | null;
 }

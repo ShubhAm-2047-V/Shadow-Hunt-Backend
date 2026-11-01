@@ -13,7 +13,8 @@ import {
   DroneReconEvent,
   RadarScanEvent,
   Team,
-  GpsCoordinate
+  GpsCoordinate,
+  NearbyCaptureTarget
 } from '../types/game.js';
 import { AbilitiesManager } from './AbilitiesManager.js';
 import { CAMPUS_PRESETS, createLiveSector } from '../osm/mapPresets.js';
@@ -65,7 +66,7 @@ export class GameRoom {
       durationSeconds: 900,
       shadowIntervalSeconds: 180,
       shadowDurationSeconds: 6,
-      captureRadius: 15.0, // 15.0 meters physical GPS capture proximity (aligns with client & absorbs outdoor GPS drift)
+      captureRadius: 20.0, // 20.0 meters physical GPS capture proximity (aligns with client & absorbs outdoor GPS drift)
       maxTeamSize: 10,
       abilitiesEnabled: true,
       shadowMode: 'GHOST_SHADOW',
@@ -588,6 +589,39 @@ export class GameRoom {
       }
     }
 
+    // 5. Compute nearby capture target for Hunter (< 25m proximity)
+    let nearbyCaptureTarget: NearbyCaptureTarget | null = null;
+    if (isHunterViewer && viewer?.isAlive) {
+      let minDistance = Infinity;
+      for (const hider of Object.values(this.players)) {
+        if (hider.team === 'HIDERS' && hider.isAlive) {
+          let dist = Infinity;
+          if (viewer.gps && hider.gps) {
+            dist = haversineDistanceMeters(
+              viewer.gps.latitude,
+              viewer.gps.longitude,
+              hider.gps.latitude,
+              hider.gps.longitude
+            );
+          } else {
+            dist = Math.hypot(
+              hider.position.x - viewer.position.x,
+              hider.position.z - viewer.position.z
+            );
+          }
+
+          if (dist <= 25.0 && dist < minDistance) {
+            minDistance = dist;
+            nearbyCaptureTarget = {
+              id: hider.id,
+              name: hider.name,
+              distance: Math.round(dist * 10) / 10
+            };
+          }
+        }
+      }
+    }
+
     return {
       roomCode: this.code,
       status: this.status,
@@ -608,7 +642,8 @@ export class GameRoom {
       winner: this.winner,
       hidersAlive: aliveHiders,
       hidersTotal: allHiders.length,
-      huntersCount
+      huntersCount,
+      nearbyCaptureTarget
     };
   }
 
