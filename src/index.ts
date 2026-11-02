@@ -67,144 +67,343 @@ app.get(['/download', '/app'], (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Download Campus Hunt Mobile App</title>
+  <title>Campus Hunt - Tactical GPS Field Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #080d1a;
+      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #080d1a 55%, #020617 100%);
       color: #f1f5f9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 24px 16px;
       text-align: center;
+      overflow-x: hidden;
     }
     .card {
-      background: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 24px;
-      padding: 32px 20px;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 28px;
+      padding: 34px 22px 28px;
       max-width: 440px;
       width: 100%;
-      box-shadow: 0 20px 50px rgba(0, 210, 255, 0.15);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 45px -10px rgba(6, 182, 212, 0.25);
+      position: relative;
     }
-    .badge {
+    .logo-container {
+      position: relative;
       display: inline-block;
-      padding: 6px 14px;
-      background: rgba(34, 197, 94, 0.15);
-      border: 1px solid #22c55e;
-      color: #22c55e;
-      border-radius: 9999px;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 1.5px;
       margin-bottom: 14px;
     }
-    h1 {
-      font-size: 26px;
+    .app-logo {
+      width: 92px;
+      height: 92px;
+      border-radius: 24px;
+      box-shadow: 0 14px 35px rgba(6, 182, 212, 0.45), 0 0 25px rgba(249, 115, 22, 0.25);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      display: block;
+      object-fit: cover;
+      margin: 0 auto;
+    }
+    .game-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      background: rgba(6, 182, 212, 0.14);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #38bdf8;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .game-title {
+      font-size: 27px;
       font-weight: 900;
-      letter-spacing: 1px;
-      margin-bottom: 6px;
-      background: linear-gradient(135deg, #ffffff 0%, #38bdf8 100%);
+      letter-spacing: 1.2px;
+      line-height: 1.15;
+      margin-bottom: 4px;
+      background: linear-gradient(135deg, #ffffff 0%, #38bdf8 55%, #fb923c 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    p.sub {
+    .tagline {
       color: #94a3b8;
-      font-size: 13px;
-      line-height: 1.4;
-      margin-bottom: 22px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
     }
-    .qr-box {
+    .roles-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .role-hunter {
+      padding: 4px 10px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 8px;
+      color: #f87171;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .vs-tag {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 900;
+    }
+    .role-hider {
+      padding: 4px 10px;
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.35);
+      border-radius: 8px;
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .qr-container {
+      margin-bottom: 20px;
+    }
+    .qr-card {
       background: #ffffff;
       padding: 12px;
-      border-radius: 18px;
+      border-radius: 20px;
       display: inline-block;
-      margin-bottom: 20px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
     }
-    .qr-box img {
-      width: 200px;
-      height: 200px;
+    .qr-card img {
+      width: 190px;
+      height: 190px;
       display: block;
+      border-radius: 8px;
     }
-    .btn {
-      display: block;
+    .qr-hint {
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .download-action {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
       width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #0284c7 0%, #06b6d4 50%, #10b981 100%);
       color: #ffffff;
       text-decoration: none;
-      font-weight: 900;
-      font-size: 16px;
-      letter-spacing: 1px;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(6, 182, 212, 0.35);
-      transition: transform 0.15s ease;
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(6, 182, 212, 0.4), 0 4px 14px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .btn:active {
-      transform: scale(0.98);
+    .download-action::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -60%;
+      width: 40%;
+      height: 200%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+      transform: rotate(25deg);
+      animation: shine 3s infinite ease-in-out;
     }
-    .size-tag {
-      font-size: 11.5px;
-      color: #94a3b8;
-      margin-top: 10px;
+    @keyframes shine {
+      0% { left: -60%; }
+      40%, 100% { left: 140%; }
     }
-    .steps {
-      margin-top: 24px;
+    .download-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 40px rgba(6, 182, 212, 0.5), 0 6px 18px rgba(16, 185, 129, 0.35);
+    }
+    .download-action:active {
+      transform: scale(0.97);
+    }
+    .btn-ico {
+      font-size: 22px;
+    }
+    .btn-labels {
       text-align: left;
-      background: #090e1d;
-      border: 1px solid #1e293b;
-      border-radius: 16px;
-      padding: 16px;
-      font-size: 12px;
+    }
+    .btn-labels strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.6px;
+      line-height: 1.2;
+    }
+    .btn-labels small {
+      display: block;
+      font-size: 11px;
+      opacity: 0.9;
+      font-weight: 600;
+    }
+    .features-grid {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .feature-chip {
+      font-size: 11px;
       color: #94a3b8;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
-    .steps ol {
-      margin-left: 18px;
+    .guide-box {
+      margin-top: 16px;
+      text-align: left;
+      background: rgba(3, 7, 18, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      padding: 14px 16px;
     }
-    .steps li {
-      margin-bottom: 6px;
-    }
-    .steps strong {
+    .guide-header {
+      font-size: 10px;
+      font-weight: 800;
       color: #38bdf8;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
     }
-    .server-status {
+    .guide-step {
+      font-size: 11.5px;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .guide-step:last-child {
+      margin-bottom: 0;
+    }
+    .step-circle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 17px;
+      height: 17px;
+      background: rgba(6, 182, 212, 0.2);
+      color: #38bdf8;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .guide-step strong {
+      color: #ffffff;
+    }
+    .guide-step em {
+      color: #94a3b8;
+      font-size: 10.5px;
+      font-style: normal;
+    }
+    .status-bar {
       margin-top: 18px;
       font-size: 11px;
       color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .status-bar strong {
+      color: #10b981;
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="badge">VERCEL PRODUCTION - OFFICIAL BUILD</div>
-    <h1>CAMPUS HUNT</h1>
-    <p class="sub">Tactical Real-World Multiplayer Operations<br>Live GPS Field Combat Radar</p>
-
-    <div class="qr-box">
-      <img src="${qrCodeUrl}" alt="Scan QR to Download Campus Hunt" />
+    <div class="logo-container">
+      <img src="/app_logo.png" alt="Campus Hunt Logo" class="app-logo" />
     </div>
 
-    <a href="/CampusHunt.apk" class="btn" download="CampusHunt.apk">
-      &#11015; DOWNLOAD ANDROID APK
+    <div class="game-badge">REAL-WORLD MULTIPLAYER GPS ACTION</div>
+    <h1 class="game-title">CAMPUS HUNT</h1>
+    <div class="tagline">HIDE &bull; TRACK &bull; SURVIVE</div>
+
+    <div class="roles-bar">
+      <span class="role-hunter">&#128308; HUNTERS</span>
+      <span class="vs-tag">VS</span>
+      <span class="role-hider">&#128309; HIDERS</span>
+    </div>
+
+    <div class="qr-container">
+      <div class="qr-card">
+        <img src="${qrCodeUrl}" alt="Scan QR to Download Campus Hunt" />
+      </div>
+      <div class="qr-hint">Point your phone camera to download directly</div>
+    </div>
+
+    <a href="/CampusHunt.apk" class="download-action" download="CampusHunt.apk">
+      <span class="btn-ico">&#11015;</span>
+      <span class="btn-labels">
+        <strong>DOWNLOAD ANDROID APK</strong>
+        <small>v1.0.0 &bull; 79.3 MB &bull; Free Direct Install</small>
+      </span>
     </a>
-    <div class="size-tag">Version 1.0.0 - 79.3 MB - Direct High-Speed Download</div>
 
-    <div class="steps">
-      <ol>
-        <li>Tap <strong>Download Android APK</strong> (or scan QR code).</li>
-        <li>Open the downloaded APK on your mobile.</li>
-        <li>Tap <strong>Install</strong> (allow 'Install unknown apps' if prompted).</li>
-        <li>Open Campus Hunt and grant <strong>Location / GPS</strong> permission!</li>
-      </ol>
+    <div class="features-grid">
+      <div class="feature-chip"><span>&#128205;</span> GPS Radar</div>
+      <div class="feature-chip"><span>&#127922;</span> Secret Roles</div>
+      <div class="feature-chip"><span>&#9889;</span> 120Hz Ultra-Smooth</div>
     </div>
 
-    <div class="server-status">
-      Authoritative Backend: <strong>ONLINE</strong> (Vercel Production)
+    <div class="guide-box">
+      <div class="guide-header">QUICK INSTALL GUIDE</div>
+      <div class="guide-step">
+        <span class="step-circle">1</span>
+        <div>Tap <strong>Download Android APK</strong> above</div>
+      </div>
+      <div class="guide-step">
+        <span class="step-circle">2</span>
+        <div>Open downloaded file & tap <strong>Install</strong> <em>(allow unknown apps if prompted)</em></div>
+      </div>
+      <div class="guide-step">
+        <span class="step-circle">3</span>
+        <div>Launch Campus Hunt & grant <strong>Location / GPS</strong> permission</div>
+      </div>
+      <div class="guide-step">
+        <span class="step-circle">4</span>
+        <div>Join or Create an Operation Room and play!</div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <span class="live-dot"></span> Satellite Operations: <strong>ONLINE</strong>
     </div>
   </div>
 </body>
