@@ -151,9 +151,39 @@ export class GameRoom {
     this.nextShadowPulseIn = this.settings.shadowIntervalSeconds;
   }
 
+  public randomizeTeams(): void {
+    const playersList = Object.values(this.players);
+    if (playersList.length === 0) return;
+
+    // Shuffle players randomly (Fisher-Yates)
+    for (let i = playersList.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [playersList[i], playersList[j]] = [playersList[j], playersList[i]];
+    }
+
+    // For solo player testing: 50% chance Hunter, 50% chance Hider
+    // For 2+ players: at least 1 Hunter and at least 1 Hider
+    let hunterCount = 1;
+    if (playersList.length === 1) {
+      hunterCount = Math.random() < 0.5 ? 1 : 0;
+    } else {
+      hunterCount = Math.max(1, Math.floor(playersList.length / 3));
+    }
+
+    playersList.forEach((player, idx) => {
+      player.team = idx < hunterCount ? 'HUNTERS' : 'HIDERS';
+    });
+  }
+
   public startMatch(): boolean {
     const activePlayers = Object.values(this.players).filter(p => p.team === 'HIDERS' || p.team === 'HUNTERS');
     if (activePlayers.length < 1) return false;
+
+    const hiders = activePlayers.filter(p => p.team === 'HIDERS');
+    const hunters = activePlayers.filter(p => p.team === 'HUNTERS');
+    if (activePlayers.length >= 2 && (hiders.length === 0 || hunters.length === 0)) {
+      this.randomizeTeams();
+    }
 
     this.status = 'IN_GAME';
     this.timeRemaining = this.settings.durationSeconds;

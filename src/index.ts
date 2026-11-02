@@ -191,9 +191,12 @@ app.post('/api/room/team', (req, res) => {
 
 // 4. Start Match via REST
 app.post('/api/room/start', (req, res) => {
-  const { playerId } = req.body;
+  const { playerId, randomRoles } = req.body;
   const room = roomManager.getRoomByPlayerId(playerId);
   if (room && room.hostId === playerId) {
+    if (randomRoles) {
+      room.randomizeTeams();
+    }
     room.startMatch();
     const state = room.getStateForPlayer(playerId);
     return res.json({ success: true, state });
