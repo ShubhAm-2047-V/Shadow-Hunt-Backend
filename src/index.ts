@@ -179,8 +179,11 @@ app.post('/api/room/join', (req, res) => {
 
 // 3. Switch Team via REST
 app.post('/api/room/team', (req, res) => {
-  const { playerId, team } = req.body;
-  const room = roomManager.getRoomByPlayerId(playerId);
+  const { playerId, roomCode, team } = req.body;
+  let room = playerId ? roomManager.getRoomByPlayerId(playerId) : undefined;
+  if (!room && roomCode) {
+    room = roomManager.getRoom(roomCode);
+  }
   if (room) {
     room.switchPlayerTeam(playerId, team);
     const state = room.getStateForPlayer(playerId);
@@ -191,17 +194,26 @@ app.post('/api/room/team', (req, res) => {
 
 // 4. Start Match via REST
 app.post('/api/room/start', (req, res) => {
-  const { playerId, randomRoles } = req.body;
-  const room = roomManager.getRoomByPlayerId(playerId);
-  if (room && room.hostId === playerId) {
+  const { playerId, roomCode, randomRoles } = req.body;
+  let room = playerId ? roomManager.getRoomByPlayerId(playerId) : undefined;
+  if (!room && roomCode) {
+    room = roomManager.getRoom(roomCode);
+  }
+  // Serverless resilient fallback: if room was evicted from memory, recreate it
+  if (!room) {
+    const code = (roomCode || 'CAMPUS').toUpperCase().trim();
+    room = roomManager.createRoom(playerId || 'host', 'Field Operator');
+    room.code = code;
+  }
+  if (room) {
     if (randomRoles) {
       room.randomizeTeams();
     }
     room.startMatch();
-    const state = room.getStateForPlayer(playerId);
+    const state = room.getStateForPlayer(playerId || room.hostId);
     return res.json({ success: true, state });
   }
-  res.status(400).json({ success: false, message: 'Only host can start the match' });
+  res.status(400).json({ success: false, message: 'Could not start match' });
 });
 
 // 5. GPS Real-World Location Stream from Mobile App (Fine Location tracking)
