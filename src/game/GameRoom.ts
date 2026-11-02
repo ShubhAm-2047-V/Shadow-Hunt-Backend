@@ -398,7 +398,7 @@ export class GameRoom {
     let capturedHider: Player | null = null;
     let closestDist = Infinity;
     // Absorb real-world mobile GPS jitter and align with the 25m UI trigger window
-    const effectiveRadius = 28.0;
+    const effectiveRadius = targetHiderId ? 40.0 : 35.0;
 
     // 1. If targetHiderId was passed, check that specific hider first
     if (targetHiderId && this.players[targetHiderId]) {
@@ -693,7 +693,7 @@ export class GameRoom {
             );
           }
 
-          if (dist <= 25.0 && dist < minDistance) {
+          if (dist <= 35.0 && dist < minDistance) {
             minDistance = dist;
             nearbyCaptureTarget = {
               id: hider.id,
