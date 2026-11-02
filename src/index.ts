@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
@@ -26,6 +28,191 @@ export const io = new SocketIOServer(server, {
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(process.cwd(), 'public')));
+
+// 1. Direct APK Binary Download Endpoint
+app.get(['/CampusHunt.apk', '/campus_hunt.apk', '/download/apk', '/api/download'], (req, res) => {
+  const possiblePaths = [
+    path.join(process.cwd(), 'public', 'CampusHunt.apk'),
+    path.join(process.cwd(), 'server', 'public', 'CampusHunt.apk'),
+    path.join(__dirname, '..', 'public', 'CampusHunt.apk'),
+    path.join(__dirname, '..', '..', 'public', 'CampusHunt.apk')
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      const stat = fs.statSync(p);
+      res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+      res.setHeader('Content-Length', stat.size);
+      res.setHeader('Content-Disposition', 'attachment; filename="CampusHunt.apk"');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      const stream = fs.createReadStream(p);
+      return stream.pipe(res);
+    }
+  }
+
+  res.status(404).send('Campus Hunt APK not found on server.');
+});
+
+// 2. Mobile Responsive APK Download Page (QR Code + 1-Click Install)
+app.get(['/download', '/app'], (req, res) => {
+  const host = req.get('host') || 'shadow-hunt-backend.vercel.app';
+  const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+  const baseUrl = `${protocol}://${host}`;
+  const apkDownloadUrl = `${baseUrl}/CampusHunt.apk`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(apkDownloadUrl)}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Download Campus Hunt Mobile App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #080d1a;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 24px;
+      padding: 32px 20px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0, 210, 255, 0.15);
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid #22c55e;
+      color: #22c55e;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #ffffff 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p.sub {
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 22px;
+    }
+    .qr-box {
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 18px;
+      display: inline-block;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+    .qr-box img {
+      width: 200px;
+      height: 200px;
+      display: block;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 900;
+      font-size: 16px;
+      letter-spacing: 1px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(6, 182, 212, 0.35);
+      transition: transform 0.15s ease;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .size-tag {
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+    .steps {
+      margin-top: 24px;
+      text-align: left;
+      background: #090e1d;
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .steps ol {
+      margin-left: 18px;
+    }
+    .steps li {
+      margin-bottom: 6px;
+    }
+    .steps strong {
+      color: #38bdf8;
+    }
+    .server-status {
+      margin-top: 18px;
+      font-size: 11px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">VERCEL PRODUCTION - OFFICIAL BUILD</div>
+    <h1>CAMPUS HUNT</h1>
+    <p class="sub">Tactical Real-World Multiplayer Operations<br>Live GPS Field Combat Radar</p>
+
+    <div class="qr-box">
+      <img src="${qrCodeUrl}" alt="Scan QR to Download Campus Hunt" />
+    </div>
+
+    <a href="/CampusHunt.apk" class="btn" download="CampusHunt.apk">
+      &#11015; DOWNLOAD ANDROID APK
+    </a>
+    <div class="size-tag">Version 1.0.0 - 79.3 MB - Direct High-Speed Download</div>
+
+    <div class="steps">
+      <ol>
+        <li>Tap <strong>Download Android APK</strong> (or scan QR code).</li>
+        <li>Open the downloaded APK on your mobile.</li>
+        <li>Tap <strong>Install</strong> (allow 'Install unknown apps' if prompted).</li>
+        <li>Open Campus Hunt and grant <strong>Location / GPS</strong> permission!</li>
+      </ol>
+    </div>
+
+    <div class="server-status">
+      Authoritative Backend: <strong>ONLINE</strong> (Vercel Production)
+    </div>
+  </div>
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+});
 
 // Initialize Room Manager
 export const roomManager = new RoomManager(
@@ -44,12 +231,16 @@ export const roomManager = new RoomManager(
 );
 
 // REST API Endpoints (Fully compatible with Vercel Serverless & Mobile App)
-app.get('/', (_req, res) => {
+app.get('/', (req, res) => {
+  const host = req.get('host') || 'shadow-hunt-backend.vercel.app';
+  const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
   res.json({
     service: 'Campus Hunt Authoritative Backend',
     status: 'ONLINE',
     version: '1.0.0',
     mode: 'Real-World GPS Tactical Operations',
+    downloadPage: `${protocol}://${host}/download`,
+    directApkUrl: `${protocol}://${host}/CampusHunt.apk`,
     time: new Date().toISOString()
   });
 });
