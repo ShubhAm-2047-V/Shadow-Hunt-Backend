@@ -494,6 +494,55 @@ export class GameRoom {
     };
   }
 
+  /**
+   * Infection Mode: Convert eliminated Shadow into an active Hunter
+   */
+  public convertPlayerToHunter(playerId: string): { success: boolean; message: string } {
+    if (this.status !== 'IN_GAME') {
+      return { success: false, message: 'Match not in progress' };
+    }
+
+    const player = this.players[playerId];
+    if (!player) {
+      return { success: false, message: 'Player not found in match' };
+    }
+
+    if (player.team === 'HUNTERS' && player.isAlive) {
+      return { success: false, message: 'Player is already an active Hunter' };
+    }
+
+    const now = Date.now();
+    player.team = 'HUNTERS';
+    player.isAlive = true;
+
+    this.killFeed.unshift({
+      id: `infect-${now}-${player.id}`,
+      timestamp: now,
+      hunterName: 'INFECTION PROTOCOL',
+      hiderName: `☣️ ${player.name} converted into a Hunter!`
+    });
+
+    if (this.killFeed.length > 20) {
+      this.killFeed = this.killFeed.slice(0, 20);
+    }
+
+    console.log(`[INFECTION CONVERSION] Player ${player.name} converted to Hunter in room ${this.code}`);
+    this.onAudioAlert(this.code, 'CONVERTED');
+
+    // Check if any alive Shadows remain
+    const remainingShadows = Object.values(this.players).filter(p => p.team === 'HIDERS' && p.isAlive);
+    if (remainingShadows.length === 0) {
+      this.endRound('HUNTERS');
+    } else {
+      this.onStateBroadcast(this);
+    }
+
+    return {
+      success: true,
+      message: `Infection confirmed! You have joined the Hunters.`
+    };
+  }
+
   public triggerAbility(playerId: string, abilityId: string) {
     if (this.status !== 'IN_GAME') return { success: false, message: 'Match not in progress' };
     const player = this.players[playerId];

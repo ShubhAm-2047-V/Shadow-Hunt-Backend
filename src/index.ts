@@ -271,6 +271,22 @@ app.post('/api/player/capture', (req, res) => {
 });
 
 // 9. Update Play Area / Boundary via REST
+// 8B. Convert Eliminated Shadow to Hunter (Infection Mode)
+app.post('/api/player/convert-hunter', (req, res) => {
+  const { playerId, roomCode } = req.body;
+  let room = playerId ? roomManager.getRoomByPlayerId(playerId) : undefined;
+  if (!room && roomCode) room = roomManager.getRoom(roomCode);
+  if (!room && roomManager.getAllRooms().length === 1) {
+    room = roomManager.getAllRooms()[0];
+  }
+  if (room) {
+    const result = room.convertPlayerToHunter(playerId);
+    const state = room.getStateForPlayer(playerId);
+    return res.json({ ...result, state });
+  }
+  res.status(404).json({ success: false, message: 'Room or player not found' });
+});
+
 app.post('/api/room/update-boundary', (req, res) => {
   try {
     const { playerId, roomCode, polygon, name, radiusMeters, centerLat, centerLng } = req.body;
